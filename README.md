@@ -69,7 +69,7 @@ func main() {
 
     // add optional second any combination or number of 'A-Za-z0-9+' for the user identifier of the e-mail 
     g, _ = g.AddClass(AlphaNumerics)        // adds A-Za-z0-9; group is then ([A-Za-z0-9])
-    g, _ = g.ApplyQuantityToLast(ZeroOrOne) // not necessary to have a second group of alphanumerics; adds ZeroOrOne '?' flag; final group: ([A-Za-z0-9]?)
+    g, _ = g.ApplyQuantityToLast(ZeroOrMore) // not necessary to have a second group of alphanumerics; adds ZeroOrMore '*' flag; final group: ([A-Za-z0-9]*)
 
     // add the '@' in the e-mail
     g, _ = g.AddFixed("@")                  // adds a necessary singular '@'; final group: (@)
@@ -87,13 +87,13 @@ func main() {
     g, _ = g.AddFixedToLast("org")          // adds 'org' as an option; final group: (com|net|org)
 
     // create an expression string
-    exp, _ := g.Output()                    // Expected output: ([A-Za-z0-9]+)(.|_?)([A-Za-z0-9]?)(@)([A-Za-z0-9]+)(.)(com|net|org)
+    exp, _ := g.Output()                    // Expected output: ([A-Za-z0-9]+)(.|_?)([A-Za-z0-9]*)(@)([A-Za-z0-9]+)(.)(com|net|org)
 
     var rex = regexp.MustCompile(exp)       // create the regular expression state machine
 
     fmt.Printf("Expression: %s\n", exp)
     // Output:
-    // Expression: ([A-Za-z0-9]+)(.|_?)([A-Za-z0-9]?)(@)([A-Za-z0-9]+)(.)(com|net|org)
+    // Expression: ([A-Za-z0-9]+)(.|_?)([A-Za-z0-9]*)(@)([A-Za-z0-9]+)(.)(com|net|org)
 
     var r string
     for _, r = range(validEmails) { // checks valid emails via the regexp state machine
