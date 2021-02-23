@@ -25,7 +25,7 @@ func main() {
     if g, e = g.ApplyQuantityToLast(ZeroOrOne); e != nil { fmt.Println("ExampleEmail failed to apply ZeroOrOne") }
 
     if g, e = g.AddClass(AlphaNumerics); e != nil { fmt.Println("ExampleEmail failed to add Alphanumerics") }
-    if g, e = g.ApplyQuantityToLast(ZeroOrOne); e != nil { fmt.Println("ExampleEmail failed to apply OneOrZero") }
+    if g, e = g.ApplyQuantityToLast(ZeroOrMore); e != nil { fmt.Println("ExampleEmail failed to apply ZeroOrMore") }
 
     if g, e = g.AddFixed("@"); e != nil { fmt.Println("ExampleEmail failed to add \"@\"") }
 
