@@ -13,28 +13,59 @@ Classes are added to the expression in square brackets expecting the use of a qu
 Fixed strings are added to the expression without square brackets, but may also support quantifiers.
 
 ## functionality
-GolangExpression() (gorex, error) produces a gorex object and its related functions the following functions are all accessible via any gorex object created
+GolangExpression(string options) (gorex, error) produces a gorex object and its related functions the following functions are all accessible via any gorex object created.
+Supported options:
+      "Unsafe": normal behavior prevents class strings outside the defined constants. This option permits any string to be passed through classes.
 
-gorex.AddClass(int) (gorex, error) produces a gorex object with a new class group of characters in the expression sequence. the classes consist of one or more of:
-      NoClass, Uppers, Lowers, Numbers, Whitespaces, Punctuation, AlphaNumerics
-  each is a simple integer flag, so if you need upper- and lower-case characters but not numbers, consider using `Uppers + Lowers`.
-    produces a group like: `([A-Za-z])`
+gorex.AddClass(string) (gorex, error) produces a gorex object with a new class group of characters in the expression sequence. the classes consist of one or more of:
+```
+      NoClass string = ""
+	Ascii string = "\x00-\x7F"
+	Blank string = "\t "
+	Control string = "\x00-\x1F\x7F"
+	Digits string = "0-9"
+	Graphical string = "!-~"
+	Lowers string = "a-z"
+	Printable string = " -~"
+	Punctuation string = "!-/:-@[-`{-~"
+	Whitespace string = "\t\n\v\f\r "
+	Uppers string = "A-Z"
+	Words string = "0-9A-Za-z_"
+	HexDigits string = "0-9A-Fa-f"
+	AlphaNumerics string = "0-9A-Za-z"
+	Alphabetics string = "A-Za-z"
+```
+      produces a group like: `([A-Z])`
 
-gorex.AddClassToLast(int) (gorex, error) produces a gorex object with a class group added to the previously created class sequence. So, instead of adding a class using `Uppers + Lowers`, consider `AddClass(Uppers); AddClassToLast(Lowers)`.
-    produces a group like: `([A-Za-z])`
+gorex.AddClassToLast(string) (gorex, error) produces a gorex object with a class group added to the previously created class sequence. Use this to add additional character options to a single character field (EG supporting both upper-case and lower-case normally requires calls to AddClass(Uppers) and AddClassToLast(Lowers) to produce an "([A-Za-z])" filter.
 
-gorex.AddFixed(string) (gorex, error) produces a gorex object with a new fixed group of one or more strings. This expression only accepts one string.
+gorex.AddFixed(string) (gorex, error) produces a gorex object with a new fixed group of one or more strings. Note, this only permits Ascii characters (0x00~0x7F). This expression only accepts one string.
     produces a group like: `(com)`
 
-gorex.AddFixedToLast(string) (gorex, error) produces a gorex object with a new fixed string applied to the prior group using an OR operator.
+gorex.AddFixedToLast(string) (gorex, error) produces a gorex object with a new fixed string applied to the prior group using an OR operator. Note, this only permits Ascii characters (0x00~0x7F).
     produces a group like: `(com|net)`
 
-gorex.ApplyQuantityToLast(...int) (gorex, error) produces a gorex object with a quantifier applied to the last class or fixed token generated. Quantifiers can be any one of:
-      Single (no quantifier), ZeroOrOne, ZeroOrMore, OneOrMore
-  so, if AddClass(Uppers) is used, only a single character from A through Z matches the expression, but if ApplyQuantityToLast(OneOrMore) is used, any number of any characters that all fall within A through Z match as a group.
+gorex.ApplyQuantifier(Quantifier, ...int) (gorex, error) produces a gorex object with a quantifier applied to the last class or fixed token generated. Quantifiers must be any one of:
+```
+	Single Quantifier = ""
+	ZeroOrMore Quantifier = "*"
+	OneOrMore Quantifier = "+"
+	ZeroOrOne Quantifier = "?"
+	MinToMax Quantifier = "{%d,%d}"
+	MinOrMore Quantifier = "{%d,}"
+	Exactly Quantifier = "{%d}"
+	ZeroOrMorePrefFewer Quantifier = "*?"
+	OneOrMorePrefFewer Quantifier = "+?"
+	ZeroOrOnePrefFewer Quantifier = "??"
+	MinToMaxPrefFewer Quantifier = "{%d,%d}?"
+	MinOrMorePrefFewer Quantifier = "{%d,}?"
+	ExactlyPrefFewer Quantifier = "{%d}?"
+```
+
+So, if AddClass(Uppers) is used, only a single character from A through Z matches the expression, but if ApplyQuantityToLast(OneOrMore) is used, any number of any characters that all fall within A through Z match as a group.
     produces a group like: `([A-Z]+)`
 
-hopefuly you'll find that these function names are reasonably straight-forware, if they are, to some extent, verbose.
+Hopefuly you'll find that these function names are reasonably straight-forware, if they are, to some extent, verbose.
 
 ## example
 The example_main.go application provides a simple e-mail verification regular expression generation. Note--the verbose errors are not necessary; they are in the example go code, but not shown here:
@@ -43,7 +74,7 @@ package main
 
 import(
   "fmt"
-  . "gorex" // gorex is added for ease of referencing. '.' causes access to gorex.go exports to be immediately accessible (otherwise, must use 'gorex.' in front of everything)
+  . "gorex" // gorex is added for ease of referencing. '.' causes access to gorex.go exports to be immediately accessible (otherwise, must use 'gorex.' in front of everything from that package)
   "regexp"
 )
 
@@ -57,34 +88,34 @@ func main() {
     g, _ = GolangExpression()
 
     // add any combination or number of 'A-Za-z0-9+' for the user identifier of the e-mail to match any alphanumerics
-    g, _ = g.AddClass(Uppers)               // adds A-Z; group is then ([A-Z])
-    g, _ = g.AddClassToLast(Lowers)         // adds a-z; group is then ([A-Za-z])
-    g, _ = g.AddClassToLast(Numbers)        // adds 0-9; group is then ([A-Za-z0-9])
-    g, _ = g.ApplyQuantityToLast(OneOrMore) // necessary to have at least one alphanumberic; adds OneOrMore '+' flag; final group: ([A-Za-z0-9]+)
+    g.AddClass(Uppers)               // adds A-Z; group is then ([A-Z])
+    g.AddClassToLast(Lowers)         // adds a-z; group is then ([A-Za-z])
+    g.AddClassToLast(Numbers)        // adds 0-9; group is then ([A-Za-z0-9])
+    g.ApplyQuantityToLast(OneOrMore) // necessary to have at least one alphanumberic; adds OneOrMore '+' flag; final group: ([A-Za-z0-9]+)
 
     // add optional single character '.' or '_' character in an e-mail
-    g, _ = g.AddFixed(".")                  // adds '.'; group is then (.)
-    g, _ = g.AddFixedToLast("_")            // adds '_'; group is then (.|_)
-    g, _ = g.ApplyQuantityToLast(ZeroOrOne) // it's optional, OK if it's not there; adds ZeroOrOne '?' flag; final group: (.|_?)
+    g.AddFixed(".")                  // adds '.'; group is then (.)
+    g.AddFixedToLast("_")            // adds '_'; group is then (.|_)
+    g.ApplyQuantityToLast(ZeroOrOne) // it's optional, OK if it's not there; adds ZeroOrOne '?' flag; final group: (.|_?)
 
     // add optional second any combination or number of 'A-Za-z0-9+' for the user identifier of the e-mail 
-    g, _ = g.AddClass(AlphaNumerics)        // adds A-Za-z0-9; group is then ([A-Za-z0-9])
-    g, _ = g.ApplyQuantityToLast(ZeroOrMore) // not necessary to have a second group of alphanumerics; adds ZeroOrMore '*' flag; final group: ([A-Za-z0-9]*)
+    g.AddClass(AlphaNumerics)        // adds A-Za-z0-9; group is then ([A-Za-z0-9])
+    g.ApplyQuantityToLast(ZeroOrMore) // not necessary to have a second group of alphanumerics; adds ZeroOrMore '*' flag; final group: ([A-Za-z0-9]*)
 
     // add the '@' in the e-mail
-    g, _ = g.AddFixed("@")                  // adds a necessary singular '@'; final group: (@)
+    g.AddFixed("@")                  // adds a necessary singular '@'; final group: (@)
 
     // add the institution identifier of any number of alphanumerics
-    g, _ = g.AddClass(AlphaNumerics)        // adds A-Za-z0-9; group is then ([A-Za-z0-9])
-    g, _ = g.ApplyQuantityToLast(OneOrMore) // necessary to have at least one alphanumeric; adds OneOrMore '+' flag; final group: ([A-Za-z0-9]+)
+    g.AddClass(AlphaNumerics)        // adds A-Za-z0-9; group is then ([A-Za-z0-9])
+    g.ApplyQuantityToLast(OneOrMore) // necessary to have at least one alphanumeric; adds OneOrMore '+' flag; final group: ([A-Za-z0-9]+)
 
     // adds the '.' of the predecessor top-level domain in the e-mail
-    g, _ = g.AddFixed(".")                  // adds a necessary singular '.'; final group: (.)
+    g.AddFixed(".")                  // adds a necessary singular '.'; final group: (.)
 
     // adds the top-level domain, supporting specific fixed options
-    g, _ = g.AddFixed("com")                // adds 'com' as an option; group is then (com)
-    g, _ = g.AddFixedToLast("net")          // adds 'net' as an option; group is then (com|net)
-    g, _ = g.AddFixedToLast("org")          // adds 'org' as an option; final group: (com|net|org)
+    g.AddFixed("com")                // adds 'com' as an option; group is then (com)
+    g.AddFixedToLast("net")          // adds 'net' as an option; group is then (com|net)
+    g.AddFixedToLast("org")          // adds 'org' as an option; final group: (com|net|org)
 
     // create an expression string
     exp, _ := g.Output()                    // Expected output: ([A-Za-z0-9]+)(.|_?)([A-Za-z0-9]*)(@)([A-Za-z0-9]+)(.)(com|net|org)
