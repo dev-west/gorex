@@ -2,7 +2,7 @@ package main
 
 import(
 	"fmt"
-	. "gorex"
+	. "github.com/dev-west/gorex"
 	"regexp"
 )
 

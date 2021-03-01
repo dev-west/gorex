@@ -35,15 +35,18 @@ gorex.AddClass(string) (gorex, error) produces a gorex object with a new class g
 	AlphaNumerics string = "0-9A-Za-z"
 	Alphabetics string = "A-Za-z"
 ```
-      produces a group like: `([A-Z])`
+
+This produces a group like: `([A-Z])`
 
 gorex.AddClassToLast(string) (gorex, error) produces a gorex object with a class group added to the previously created class sequence. Use this to add additional character options to a single character field (EG supporting both upper-case and lower-case normally requires calls to AddClass(Uppers) and AddClassToLast(Lowers) to produce an "([A-Za-z])" filter.
 
 gorex.AddFixed(string) (gorex, error) produces a gorex object with a new fixed group of one or more strings. Note, this only permits Ascii characters (0x00~0x7F). This expression only accepts one string.
-    produces a group like: `(com)`
+
+This produces a group like: `(com)`
 
 gorex.AddFixedToLast(string) (gorex, error) produces a gorex object with a new fixed string applied to the prior group using an OR operator. Note, this only permits Ascii characters (0x00~0x7F).
-    produces a group like: `(com|net)`
+
+This produces a group like: `(com|net)`
 
 gorex.ApplyQuantifier(Quantifier, ...int) (gorex, error) produces a gorex object with a quantifier applied to the last class or fixed token generated. Quantifiers must be any one of:
 ```
@@ -63,23 +66,25 @@ gorex.ApplyQuantifier(Quantifier, ...int) (gorex, error) produces a gorex object
 ```
 
 So, if AddClass(Uppers) is used, only a single character from A through Z matches the expression, but if ApplyQuantifier(OneOrMore) is used, any number of any characters that all fall within A through Z match as a group.
-    produces a group like: `([A-Z]+)`
+
+This produces a group like: `([A-Z]+)`
 
 Hopefuly you'll find that these function names are reasonably straight-forware, if they are, to some extent, verbose.
 
 ## example
-The example_main.go application provides a simple e-mail verification regular expression generation. Note--the verbose errors are not necessary; they are in the example go code, but not shown here:
+The ex_main.go application provides a simple e-mail verification regular expression generation. Note--the verbose errors are not necessary; they are in the example go code, but not shown here:
 ```
 package main
 
 import(
   "fmt"
-  . "gorex" // gorex is added for ease of referencing. '.' causes access to gorex.go exports to be immediately accessible (otherwise, must use 'gorex.' in front of everything from that package)
+  // gorex is added for ease of referencing. '.' causes access to gorex.go exports to be immediately accessible (otherwise, must use 'gorex.' in front of everything from that package)
+  . "github.com/dev-west/gorex"
   "regexp"
 )
 
 func main() {
-    var g Gorex
+    var g *Gorex
 
     validEmails := [...]string{ "joe@mail.org", "john_doe@co.net", "perry.@place.com" }
     invalidEmails := [...]string{ "_tobby@message.org", "goat@mail", "finn@.net" }
@@ -90,7 +95,7 @@ func main() {
     // add any combination or number of 'A-Za-z0-9+' for the user identifier of the e-mail to match any alphanumerics
     g.AddClass(Uppers)               // adds A-Z; group is then ([A-Z])
     g.AddClassToLast(Lowers)         // adds a-z; group is then ([A-Za-z])
-    g.AddClassToLast(Numbers)        // adds 0-9; group is then ([A-Za-z0-9])
+    g.AddClassToLast(Digits)         // adds 0-9; group is then ([A-Za-z0-9])
     g.ApplyQuantifier(OneOrMore) // necessary to have at least one alphanumberic; adds OneOrMore '+' flag; final group: ([A-Za-z0-9]+)
 
     // add optional single character '.' or '_' character in an e-mail
