@@ -10,8 +10,8 @@ import(
 func main() {
     var g *Gorex
 
-    validEmails := [...]string{ "joe@mail.org", "john_doe@co.net", "perry.@place.com" }
-    invalidEmails := [...]string{ "_tobby@message.org", "goat@mail", "finn@.net" }
+    validEmails := [...]string{ "joe@MAIL.org", "john_doe@co.net", "perry.@place.com" }
+    invalidEmails := [...]string{ "tobby@message.ORG", "goat@mail", "finn@.net" }
 
     // create expression object
     g, _ = GolangExpression()
@@ -35,11 +35,14 @@ func main() {
     g.AddFixed("@")                  // adds a necessary singular '@'; final group: (@)
 
     // add the institution identifier of any number of alphanumerics
-    g.AddClass(AlphaNumerics)        // adds A-Za-z0-9; group is then ([A-Za-z0-9])
-    g.ApplyQuantifier(OneOrMore) // necessary to have at least one alphanumeric; adds OneOrMore '+' flag; final group: ([A-Za-z0-9]+)
+    g.AddClass(Lowers)             // adds a-z; group is then ([A-Za-z0-9])
+    g.AddClassToLast(Digits)             // adds 0-9; group is then ([a-z0-9])
+    g.SetFlags(CaseInsensitive)    // sets case insensitive flag for this and following groups
+    g.ApplyQuantifier(OneOrMore)   // necessary to have at least one alphanumeric; adds OneOrMore '+' flag; final group: ([A-Za-z0-9]+)
 
     // adds the '.' of the predecessor top-level domain in the e-mail
-    g.AddFixed(".")                  // adds a necessary singular '.'; final group: (.)
+    g.AddFixed(".")                // adds a necessary singular '.'; final group: (.)
+    g.ClearFlags(CaseInsensitive)  // clears case insensitive flag for this and following groups
 
     // adds the top-level domain, supporting specific fixed options
     g.AddFixed("com")                // adds 'com' as an option; group is then (com)

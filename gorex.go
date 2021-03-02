@@ -50,6 +50,7 @@ type Gorex struct {
 
 type rexGroup struct {
 	tokens []rexToken
+	flags rexFlag
 }
 
 type rexToken struct {
@@ -102,6 +103,24 @@ const (
 	Alphabetics string = "A-Za-z"
 )
 
+// flag definitions
+type Flag string
+
+type rexFlag struct {
+	i bool
+	m bool
+	s bool
+	U bool
+}
+
+const (
+	CaseInsensitive string = "i"
+	MultiLineMode string = "m"
+	PeriodMatchesNewline string = "s"
+	UngreedySwap string = "U"
+)
+
+// empty object for returning errors
 var eG *Gorex = &Gorex{ }
 
 // options
@@ -130,9 +149,53 @@ func GolangExpression(opts ...string) (*Gorex, error) {
 
 func (g *Gorex) Output() (string, error) {
 	o := bytes.NewBufferString("")
+	activeFlags := rexFlag{ false, false, false, false }
 	for _, gr := range(g.groups) {
-		o.WriteString("(")
+		flagParens := false
+		if (gr.flags.i || gr.flags.m || gr.flags.s || gr.flags.U) ||
+				((!gr.flags.i || !gr.flags.m || !gr.flags.s || !gr.flags.U) &&
+				(activeFlags.i || activeFlags.m || activeFlags.s || activeFlags.U)) {
+			flagParens = true
+			o.WriteString("(?")
+		}
+		if gr.flags.i {
+			activeFlags.i = true
+			o.WriteString(CaseInsensitive)
+		}
+		if gr.flags.m {
+			activeFlags.m = true
+			o.WriteString(MultiLineMode)
+		}
+		if gr.flags.s {
+			activeFlags.s = true
+			o.WriteString(PeriodMatchesNewline)
+		}
+		if gr.flags.U {
+			activeFlags.U = true
+			o.WriteString(UngreedySwap)
+		}
+		if (!gr.flags.i && activeFlags.i) || (!gr.flags.m && activeFlags.m) || (!gr.flags.s && activeFlags.s) || (!gr.flags.U && activeFlags.U) {
+			o.WriteString("-")
+			if !gr.flags.i && activeFlags.i {
+				activeFlags.i = false
+				o.WriteString(CaseInsensitive)
+			}
+			if !gr.flags.m && activeFlags.m {
+				activeFlags.m = false
+				o.WriteString(MultiLineMode)
+			}
+			if !gr.flags.s && activeFlags.s {
+				activeFlags.s = false
+				o.WriteString(PeriodMatchesNewline)
+			}
+			if !gr.flags.U && activeFlags.U {
+				activeFlags.U = false
+				o.WriteString(UngreedySwap)
+			}
+		}
+		if flagParens { o.WriteString(")") }
 
+		o.WriteString("(")
 		// add token data
 		for i, tk := range(gr.tokens) {
 			if tk.class != NoClass {
@@ -306,6 +369,50 @@ func (g *Gorex) ApplyQuantifier(q Quantifier, args ...int) (*Gorex, error) {
 	case 2:
 		g.groups[gId].tokens[tId].quantifier.argv[0] = args[0]
 		g.groups[gId].tokens[tId].quantifier.argv[1] = args[1]
+	}
+
+	return g, nil
+}
+
+func verifyFlags(c string) bool {
+	for _, ch := range(c) {
+		if	string(ch) != CaseInsensitive &&
+			string(ch) != MultiLineMode &&
+			string(ch) != PeriodMatchesNewline &&
+			string(ch) != UngreedySwap { return false }
+	}
+
+	return true
+}
+
+func (g *Gorex) SetFlags(c string) (*Gorex, error) {
+	if c == "" { return eG, errors.New("Gorex @326: invalid flag") }
+	if len(g.groups) == 0 { return eG, errors.New("Gorex @327: invalid group index") }
+	gId := len(g.groups) - 1
+
+	if !verifyFlags(c) { return eG, errors.New("Gorex @342: invalid flag") }
+	for _, ch := range(c) {
+		if string(ch) == CaseInsensitive { g.groups[gId].flags.i = true }
+		if string(ch) == MultiLineMode { g.groups[gId].flags.m = true }
+		if string(ch) == PeriodMatchesNewline { g.groups[gId].flags.s = true }
+		if string(ch) == UngreedySwap { g.groups[gId].flags.U = true }
+	}
+
+	return g, nil
+}
+
+func (g *Gorex) ClearFlags(c string) (*Gorex, error) {
+	if c == "" { return eG, errors.New("Gorex @326: invalid flag") }
+	if len(g.groups) == 0 { return eG, errors.New("Gorex @327: invalid group index") }
+	gId := len(g.groups) - 1
+
+	if !verifyFlags(c) { return eG, errors.New("Gorex @342: invalid flag") }
+
+	for _, ch := range(c) {
+		if string(ch) == CaseInsensitive { g.groups[gId].flags.i = false }
+		if string(ch) == MultiLineMode { g.groups[gId].flags.m = false }
+		if string(ch) == PeriodMatchesNewline { g.groups[gId].flags.s = false }
+		if string(ch) == UngreedySwap { g.groups[gId].flags.U = false }
 	}
 
 	return g, nil
