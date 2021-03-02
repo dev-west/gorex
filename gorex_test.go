@@ -284,6 +284,75 @@ func TestApplyQuantifier(t *testing.T) {
 	if e != nil { t.Fatalf("ApplyQuantifier(\"%s\", %d, %d) unexpected error invalid quantifier", q, 2, 3) }
 }
 
+func TestFlags(t *testing.T) {
+	var g *Gorex
+	var e error
+	var f string = "COM"
+	var s string = "com"
+
+	// construct expression
+	g, _ = GolangExpression()
+
+	// flag applied without prior, no group
+	_, e = g.SetFlags(CaseInsensitive)
+	if e == nil { t.Fatalf("SetFlags(\"%s\") expected error invalid group index", CaseInsensitive) }
+
+	_, e = g.ClearFlags(CaseInsensitive)
+	if e == nil { t.Fatalf("ClearFlags(\"%s\") expected error invalid group index", CaseInsensitive) }
+
+	// test CaseInsensitive flag
+	g.AddFixed(f) // add uppercase
+	_, e = g.SetFlags(CaseInsensitive)
+	if e != nil { t.Fatalf("SetFlags(\"%s\") unexpected error", CaseInsensitive) }
+	g.AddFixed(s) // add lowercase
+	_, e = g.ClearFlags(CaseInsensitive)
+	if e != nil { t.Fatalf("ClearFlags(\"%s\") unexpected error", CaseInsensitive) }
+	o, e := g.Output()
+	r := regexp.MustCompile(o)
+	// test against (?i)(COM)(?-i)(com) against "comcom"
+	if !r.MatchString(s+s) { t.Fatalf("r.MatchString(\"%s\") failed to match", s) }
+	// test against (?i)(COM)(?-i)(com) against "comCOM"
+	if r.MatchString(s+f) { t.Fatalf("r.MatchString(\"%s\") unexpectedly matched", s) }
+
+	// test MultiLineMode flag TODO--cannot test without ^$ support
+
+	// test PeriodMatchesNewline
+	g, _ = GolangExpression()
+	g.AddFixed("com.org") // add string with period
+	_, e = g.SetFlags(PeriodMatchesNewline)
+	if e != nil { t.Fatalf("SetFlags(\"%s\") unexpected error", PeriodMatchesNewline) }
+	o, e = g.Output()
+	r = regexp.MustCompile(o)
+	// test against (?i)(com.org) against "com\norg"
+	if !r.MatchString("com\norg") { t.Fatalf("r.MatchString(\"%s\") failed to match %s", o, "com\\norg") }
+
+	g, _ = GolangExpression()
+	g.AddFixed("com.org") // add string with period
+	o, e = g.Output()
+	r = regexp.MustCompile(o)
+	// test against (com.org) against "com\norg"
+	if r.MatchString("com\norg") { t.Fatalf("r.MatchString(\"%s\") unexpectedly matched %s", o, "com\\norg") }
+
+	// test Ungreedy
+	g, _ = GolangExpression()
+	g.AddClass(Digits) // add numerics filter
+	g.ApplyQuantifier(OneOrMore) // add + prefer more
+	_, e = g.SetFlags(UngreedySwap) // swaps ungreedy so OneOrMore => prefer fewer
+	if e != nil { t.Fatalf("SetFlags(\"%s\") unexpected error", UngreedySwap) }
+	o, _ = g.Output()
+	r = regexp.MustCompile(o)
+	// test against (?U)([0-9]+) against "0123456789" prefers fewer--expects '0'
+	if len(r.Find([]byte("0123456789"))) > 1 { t.Fatalf("r.MatchString(\"%s\") failed to match %s", o, "0123456789") }
+
+	_, e = g.ClearFlags(UngreedySwap) // swaps ungreedy so OneOrMore => prefer fewer
+	if e != nil { t.Fatalf("SetFlags(\"%s\") unexpected error", UngreedySwap) }
+	o, _ = g.Output()
+	r = regexp.MustCompile(o)
+	// test against ([0-9]+) against "0123456789" prefers more--expects ['0' '1' ... '9']
+	if len(r.Find([]byte("0123456789"))) != len("0123456789") { t.Fatalf("r.MatchString(\"%s\") failed to match %s", o, "0123456789") }
+
+}
+
 func ExampleEmail() {
 	var g *Gorex
 	var e error
