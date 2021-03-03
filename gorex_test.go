@@ -12,7 +12,7 @@ func testClass(g *Gorex, c string, t *testing.T) (*testing.T, error) {
 
 	// creation of GolangExpression
 	g, _ = GolangExpression()
-	g, e = g.AddClass(c)
+	e = g.AddClass(c)
 	if e != nil {
 		t.Fatalf("AddClass(\"%s\") unexpected err %#v => %s\n", c, g, e)
 	}
@@ -48,13 +48,13 @@ func TestAddClass(t *testing.T) {
 	g, _ = GolangExpression()
 
 	// test expected NoClass error
-	_, e = g.AddClass(NoClass)
+	e = g.AddClass(NoClass)
 	if e == nil {
 		t.Fatalf("AddClass(\"%s\") did not produce expected error: %s\n", NoClass, e)
 	}
 
 	// test invalid class
-	_, e = g.AddClass("?!")
+	e = g.AddClass("?!")
 	if e == nil {
 		t.Fatalf("AddClass(\"%s\") did not produce expected error: %s\n", "?!", e)
 	}
@@ -75,7 +75,7 @@ func TestAddClass(t *testing.T) {
 	testClass(&Gorex{ }, Alphabetics, t)
 
 	// test unsafe built class
-	g, _ = g.AddClass(Uppers + Lowers)
+	g.AddClass(Uppers + Lowers)
 	if e == nil {
 		t.Fatalf("AddClass(\"%s\") did not produce expected error: %s\n", Uppers + Lowers, e)
 	}
@@ -102,23 +102,23 @@ func TestAddClassToLast(t *testing.T) {
 	g, _ = GolangExpression()
 
 	// test ...ToLast for invalid class
-	_, e = g.AddClassToLast(NoClass)
+	e = g.AddClassToLast(NoClass)
 	if e == nil {
 		t.Fatalf("AddClassToLast(0x%04x) did not produce expected error (invalid class): %s\n", NoClass, e)
 	}
 
 	// test ...ToLast without prior call
-	_, e = g.AddClassToLast(c)
+	e = g.AddClassToLast(c)
 	if e == nil {
 		t.Fatalf("AddClassToLast(0x%04x) did not produce expected error (no last): %s\n", c, e)
 	}
 
 	// Add Prior
-	g, e = g.AddClass(c)
+	e = g.AddClass(c)
 	if e != nil { t.Fatalf("AddClassToLast(0x%04x) unexpected error produced: %s\n", c, e) }
 
 	// Valid ...ToLast
-	g, e = g.AddClassToLast(d)
+	e = g.AddClassToLast(d)
 	if e != nil { t.Fatalf("AddClassToLast(0x%04x) unexpected error produced: %s\n", d, e)	}
 
 	// one group added as expected
@@ -142,17 +142,18 @@ func TestAddClassToLast(t *testing.T) {
 func TestAddFixed(t *testing.T) {
 	var g *Gorex
 	var e error
+	var o string
 
 	// construct expression
 	g, _ = GolangExpression()
 
 	// test out of range error
-	g, e = g.AddFixed( "\xFF" )
+	e = g.AddFixed( "\xFF" )
 	if e == nil { t.Fatalf("AddFixed(\\x255) expected error\n") }
 
 	// valid request
 	c := "com"
-	g, e = g.AddFixed(c)
+	e = g.AddFixed(c)
 
 	// valid reqeust return error
 	if e != nil { t.Fatalf("AddFixed(\"%s\") unexpected error: %s\n", c, e) }
@@ -178,6 +179,12 @@ func TestAddFixed(t *testing.T) {
 			break
 		}
 	}
+
+	// test output
+	var w = "("+c+")"
+	o, e = g.Output()
+	if e != nil { t.Fatalf("AddFixed(%s): unexpected error calling Output()\n", c) }
+	if o != w { t.Fatalf("AddFixed(%s): output not correct \"%s\" != \"%s\"\n", c, o, w) }
 }
 
 func TestAddFixedToLast(t *testing.T) {
@@ -189,17 +196,17 @@ func TestAddFixedToLast(t *testing.T) {
 	g, _ = GolangExpression()
 
 	// test out of range
-	_, e = g.AddFixedToLast("\xFF")
+	e = g.AddFixedToLast("\xFF")
 	if e == nil { t.Fatalf("AddFixedToLast(\"\\x%2x\") did not produce expected error (invalid byte): %s\n", '\xFF', e)	}
 
 	// ...ToLast without prior
-	_, e = g.AddFixedToLast(c[0])
+	e = g.AddFixedToLast(c[0])
 	if e == nil { t.Fatalf("AddFixedToLast(\"%s\") did not produce expected error (no last): %s\n", c[0], e) }
 
 	// valid test
-	g, e = g.AddFixed(c[0])
+	e = g.AddFixed(c[0])
 	if e != nil { t.Fatalf("AddFixedToLast(\"%s\") unexpected error produced: %s\n", c[0], e) }
-	g, e = g.AddFixedToLast(c[1])
+	e = g.AddFixedToLast(c[1])
 	if e != nil { t.Fatalf("AddFixedToLast(\"%s\") unexpected error produced: %s\n", c[1], e) }
 
 	// one group generated
@@ -234,85 +241,54 @@ func TestApplyQuantifier(t *testing.T) {
 	g, _ = GolangExpression()
 
 	// quantifier applied without prior, no group
-	_, e = g.ApplyQuantifier(q)
+	e = g.ApplyQuantifier(q)
 	if e == nil { t.Fatalf("ApplyQuantifier(\"%s\") expected error invalid group index", q) }
 
 	// quantifier applied without prior, no token
 	g.groups = append(g.groups, rexGroup{ })
-	_, e = g.ApplyQuantifier(q)
+	e = g.ApplyQuantifier(q)
 	if e == nil { t.Fatalf("ApplyQuantifier(\"%s\") expected error invalid token index", q) }
 
 	// apply empty quantifier
 	g, _ = GolangExpression()
-	g, _ = g.AddFixed(f)
-	g, e = g.ApplyQuantifier("")
+	g.AddFixed(f)
+	e = g.ApplyQuantifier("")
 	if e == nil { t.Fatalf("ApplyQuantifier(\"\") expected error invalid quantifier") }
 
 	// apply incorrect arguments
 	g, _ = GolangExpression()
-	g, _ = g.AddClass(c)
-	g, e = g.ApplyQuantifier(OneOrMore, 1, 2)
+	g.AddClass(c)
+	e = g.ApplyQuantifier(OneOrMore, 1, 2)
 	if e == nil { t.Fatalf("ApplyQuantifier() expected error invalid quantifier") }
 
 	g, _ = GolangExpression()
-	g, _ = g.AddClass(c)
-	g, e = g.ApplyQuantifier(MinToMax)
+	g.AddClass(c)
+	e = g.ApplyQuantifier(MinToMax)
 	if e == nil { t.Fatalf("ApplyQuantifier() expected error invalid quantifier") }
-	g, e = g.ApplyQuantifier(MinToMax, 1)
-	if e == nil { t.Fatalf("ApplyQuantifier() expected error invalid quantifier") }
-
-	g, _ = GolangExpression()
-	g, _ = g.AddClass(c)
-	g, e = g.ApplyQuantifier(q, -2, -3)
+	e = g.ApplyQuantifier(MinToMax, 1)
 	if e == nil { t.Fatalf("ApplyQuantifier() expected error invalid quantifier") }
 
 	g, _ = GolangExpression()
-	g, _ = g.AddClass(c)
-	g, e = g.ApplyQuantifier(q, 0, 0)
+	g.AddClass(c)
+	e = g.ApplyQuantifier(q, -2, -3)
+	if e == nil { t.Fatalf("ApplyQuantifier() expected error invalid quantifier") }
+
+	g, _ = GolangExpression()
+	g.AddClass(c)
+	e = g.ApplyQuantifier(q, 0, 0)
 	if e == nil { t.Fatalf("ApplyQuantifier() expected error invalid quantifier") }
 
 	// test valid
 	g, _ = GolangExpression()
-	g, _ = g.AddClass(c)
-	g, e = g.ApplyQuantifier(q)
+	g.AddClass(c)
+	e = g.ApplyQuantifier(q)
 	if e != nil { t.Fatalf("ApplyQuantifier(\"%s\") unexpected error invalid quantifier", q) }
 
 	q = MinToMax
 	g, _ = GolangExpression()
-	g, _ = g.AddClass(c)
-	g, e = g.ApplyQuantifier(q, 2, 3)
+	g.AddClass(c)
+	e = g.ApplyQuantifier(q, 2, 3)
 	if e != nil { t.Fatalf("ApplyQuantifier(\"%s\", %d, %d) unexpected error invalid quantifier", q, 2, 3) }
-}
-
-func TestApplyAnchor(t *testing.T) {
-	var g *Gorex
-	var e error
-	var a Anchor = AtEnd
-	var f string = "end"
-	var w string = "(" + string(a) + f + ")"
-	var o string
-
-	// construct expression
-	g, _ = GolangExpression()
-
-	// apply anchor without prior
-	g, e = g.ApplyAnchor(a)
-	if e == nil { t.Fatalf("ApplyAnchor(\"%s\") expected error invalid group id: %s", a, e) }
-
-	g, _ = g.AddFixed(f)
-
-	// apply invalid anchor
-	g, e = g.ApplyAnchor("x")
-	if e == nil { t.Fatalf("ApplyAnchor(\"x\") expected error invalid anchor: %s", e) }
-
-	// apply valid anchor
-	g, e = g.ApplyAnchor(a)
-	if e != nil { t.Fatalf("ApplyAnchor(\"%s\") unexpected error: %s", a, e) }
-
-	// test output
-	o, e = g.Output()
-	if o != w { t.Fatalf("ApplyAnchor(\"%s\") incorrect output %s: %s", a, w, o) }
-
 }
 
 func TestFlags(t *testing.T) {
@@ -325,18 +301,18 @@ func TestFlags(t *testing.T) {
 	g, _ = GolangExpression()
 
 	// flag applied without prior, no group
-	_, e = g.SetFlags(CaseInsensitive)
+	e = g.SetFlags(CaseInsensitive)
 	if e == nil { t.Fatalf("SetFlags(\"%s\") expected error invalid group index", CaseInsensitive) }
 
-	_, e = g.ClearFlags(CaseInsensitive)
+	e = g.ClearFlags(CaseInsensitive)
 	if e == nil { t.Fatalf("ClearFlags(\"%s\") expected error invalid group index", CaseInsensitive) }
 
 	// test CaseInsensitive flag
 	g.AddFixed(f) // add uppercase
-	_, e = g.SetFlags(CaseInsensitive)
+	e = g.SetFlags(CaseInsensitive)
 	if e != nil { t.Fatalf("SetFlags(\"%s\") unexpected error", CaseInsensitive) }
 	g.AddFixed(s) // add lowercase
-	_, e = g.ClearFlags(CaseInsensitive)
+	e = g.ClearFlags(CaseInsensitive)
 	if e != nil { t.Fatalf("ClearFlags(\"%s\") unexpected error", CaseInsensitive) }
 	o, e := g.Output()
 	r := regexp.MustCompile(o)
@@ -350,7 +326,7 @@ func TestFlags(t *testing.T) {
 	// test PeriodMatchesNewline
 	g, _ = GolangExpression()
 	g.AddFixed("com.org") // add string with period
-	_, e = g.SetFlags(PeriodMatchesNewline)
+	e = g.SetFlags(PeriodMatchesNewline)
 	if e != nil { t.Fatalf("SetFlags(\"%s\") unexpected error", PeriodMatchesNewline) }
 	o, e = g.Output()
 	r = regexp.MustCompile(o)
@@ -368,20 +344,50 @@ func TestFlags(t *testing.T) {
 	g, _ = GolangExpression()
 	g.AddClass(Digits) // add numerics filter
 	g.ApplyQuantifier(OneOrMore) // add + prefer more
-	_, e = g.SetFlags(UngreedySwap) // swaps ungreedy so OneOrMore => prefer fewer
+	e = g.SetFlags(UngreedySwap) // swaps ungreedy so OneOrMore => prefer fewer
 	if e != nil { t.Fatalf("SetFlags(\"%s\") unexpected error", UngreedySwap) }
 	o, _ = g.Output()
 	r = regexp.MustCompile(o)
 	// test against (?U)([0-9]+) against "0123456789" prefers fewer--expects '0'
 	if len(r.Find([]byte("0123456789"))) > 1 { t.Fatalf("r.MatchString(\"%s\") failed to match %s", o, "0123456789") }
 
-	_, e = g.ClearFlags(UngreedySwap) // swaps ungreedy so OneOrMore => prefer fewer
+	e = g.ClearFlags(UngreedySwap) // swaps ungreedy so OneOrMore => prefer fewer
 	if e != nil { t.Fatalf("SetFlags(\"%s\") unexpected error", UngreedySwap) }
 	o, _ = g.Output()
 	r = regexp.MustCompile(o)
 	// test against ([0-9]+) against "0123456789" prefers more--expects ['0' '1' ... '9']
 	if len(r.Find([]byte("0123456789"))) != len("0123456789") { t.Fatalf("r.MatchString(\"%s\") failed to match %s", o, "0123456789") }
 
+}
+
+func TestApplyAnchor(t *testing.T) {
+	var g *Gorex
+	var e error
+	var a Anchor = atEnd
+	var f string = "end"
+	var w string = "(" + string(a) + f + ")"
+	var o string = ""
+
+	g, _ = GolangExpression()
+
+	// test ApplyAnchor without groups
+	e = g.ApplyAnchor(a)
+	if e == nil { t.Fatalf("ApplyAnchor(\"%s\") without group expects error", a) }
+
+	g.AddFixed(f)
+
+	// test ApplyAnchor with invalid anchor
+	e = g.ApplyAnchor("x")
+	if e == nil { t.Fatalf("ApplyAnchor(\"%s\") invalid anchor expects error", "x") }
+
+	// test valid ApplyAnchor
+	e = g.ApplyAnchor(a)
+	if e != nil { t.Fatalf("ApplyAnchor(\"%s\") valid anchor unexpected error: %s", a, e) }
+
+	// test output
+	o, e = g.Output()
+	if e != nil { t.Fatalf("ApplyAnchor(\"%s\") output failed: %s", a, e) }
+	if o != w { t.Fatalf("ApplyAnchor(\"%s\") output not correct \"%s\" != \"%s\"", a, o, w) }
 }
 
 func ExampleEmail() {
@@ -391,29 +397,29 @@ func ExampleEmail() {
 	validEmails := [...]string{ "joe@mail.org", "john_doe@co.net", "perry.@place.com" }
 	invalidEmails := [...]string{ "_tobby@message.org", "goat@mail", "finn@.net" }
 
-	if g, e = GolangExpression(); e != nil { fmt.Println("ExampleEmail failed to create Gorex") }
-	if g, e = g.AddClass(Uppers); e != nil { fmt.Println("ExampleEmail failed to add Uppers") }
-	if g, e = g.AddClassToLast(Lowers); e != nil { fmt.Println("ExampleEmail failed to add Lowers") }
-	if g, e = g.AddClassToLast(Digits); e != nil { fmt.Println("ExampleEmail failed to add Numbers") }
-	if g, e = g.ApplyQuantifier(OneOrMore); e != nil { fmt.Println("ExampleEmail failed to apply quantity OneOrMore") }
+	g, _ = GolangExpression();
+	if e = g.AddClass(Uppers); e != nil { fmt.Println("ExampleEmail failed to add Uppers") }
+	if e = g.AddClassToLast(Lowers); e != nil { fmt.Println("ExampleEmail failed to add Lowers") }
+	if e = g.AddClassToLast(Digits); e != nil { fmt.Println("ExampleEmail failed to add Numbers") }
+	if e = g.ApplyQuantifier(OneOrMore); e != nil { fmt.Println("ExampleEmail failed to apply quantity OneOrMore") }
 
-	if g, e = g.AddFixed("."); e != nil { fmt.Println("ExampleEmail failed to add \".\"") }
-	if g, e = g.AddFixedToLast("_"); e != nil { fmt.Println("ExampleEmail failed to add \"_\"") }
-	if g, e = g.ApplyQuantifier(ZeroOrOne); e != nil { fmt.Println("ExampleEmail failed to apply ZeroOrOne") }
+	if e = g.AddFixed("."); e != nil { fmt.Println("ExampleEmail failed to add \".\"") }
+	if e = g.AddFixedToLast("_"); e != nil { fmt.Println("ExampleEmail failed to add \"_\"") }
+	if e = g.ApplyQuantifier(ZeroOrOne); e != nil { fmt.Println("ExampleEmail failed to apply ZeroOrOne") }
 
-	if g, e = g.AddClass(AlphaNumerics); e != nil { fmt.Println("ExampleEmail failed to add Alphanumerics") }
-	if g, e = g.ApplyQuantifier(ZeroOrOne); e != nil { fmt.Println("ExampleEmail failed to apply OneOrZero") }
+	if e = g.AddClass(AlphaNumerics); e != nil { fmt.Println("ExampleEmail failed to add Alphanumerics") }
+	if e = g.ApplyQuantifier(ZeroOrOne); e != nil { fmt.Println("ExampleEmail failed to apply OneOrZero") }
 
-	if g, e = g.AddFixed("@"); e != nil { fmt.Println("ExampleEmail failed to add \"@\"") }
+	if e = g.AddFixed("@"); e != nil { fmt.Println("ExampleEmail failed to add \"@\"") }
 
-	if g, e = g.AddClass(AlphaNumerics); e != nil { fmt.Println("ExampleEmail failed to add Alphanumerics") }
-	if g, e = g.ApplyQuantifier(ZeroOrOne); e != nil { fmt.Println("ExampleEmail failed to apply OneOrZero") }
+	if e = g.AddClass(AlphaNumerics); e != nil { fmt.Println("ExampleEmail failed to add Alphanumerics") }
+	if e = g.ApplyQuantifier(ZeroOrOne); e != nil { fmt.Println("ExampleEmail failed to apply OneOrZero") }
 
-	if g, e = g.AddFixed("."); e != nil { fmt.Println("ExampleEmail failed to add \".\"") }
+	if e = g.AddFixed("."); e != nil { fmt.Println("ExampleEmail failed to add \".\"") }
 
-	if g, e = g.AddFixed("com"); e != nil { fmt.Println("ExampleEmail failed to add \"com\"") }
-	if g, e = g.AddFixed("net"); e != nil { fmt.Println("ExampleEmail failed to add \"net\"") }
-	if g, e = g.AddFixed("org"); e != nil { fmt.Println("ExampleEmail failed to add \"org\"") }
+	if e = g.AddFixed("com"); e != nil { fmt.Println("ExampleEmail failed to add \"com\"") }
+	if e = g.AddFixed("net"); e != nil { fmt.Println("ExampleEmail failed to add \"net\"") }
+	if e = g.AddFixed("org"); e != nil { fmt.Println("ExampleEmail failed to add \"org\"") }
 
 	var exp string
 	var r string

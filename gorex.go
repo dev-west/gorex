@@ -3,10 +3,11 @@
 // builds basic regular expression from understandable blocks
 //
 // usage
-// 1. create a new gorex constructor with optional standard definition
-// 2. define possibility blocks (p-blocks)
-// 3. define connecting blocks (c-blocks) between those p-blocks
-// 4. optimize & output regex string at any point
+// 1. create a new gorex constructor
+// 2. define content filter
+// 3. define modifiers for that content filter
+// 4. repeat steps 2-3
+// 5. output regex string at any point
 //
 //  var rex = gorex.GolangExpression()
 //  rex.AddClass(gorex.Uppers)                // add group ([A-Z])
@@ -60,12 +61,12 @@ type rexToken struct {
 	quantifier rexQuan
 }
 
-// token anchors
+// token modifiers
 type Anchor string
 
 const (
-	AtBeginning = "^"
-	AtEnd = "&"
+	atBeginning = "^"
+	atEnd = "&"
 )
 
 // token quantifiers (variable data)
@@ -129,19 +130,16 @@ const (
 	UngreedySwap string = "U"
 )
 
-// empty object for returning errors
-var eG *Gorex = &Gorex{ }
-
 // options
 const (
 	Unsafe string = "Unsafe"
 )
 
 func GolangExpression(opts ...string) (*Gorex, error) {
-	var r Gorex
+	var r = &Gorex{ }
 	r.unsafe = false
 	if len(opts) > 1 {
-		return eG, errors.New("Gorex @116: invalid GolangExpression options")
+		return &Gorex{ }, errors.New("Gorex @116: invalid GolangExpression options")
 	} else {
 		for _, op := range(opts) {
 			if op == "Unsafe" {
@@ -149,11 +147,11 @@ func GolangExpression(opts ...string) (*Gorex, error) {
 				continue
 			}
 
-			return eG, errors.New("Gorex @124: invalid GolangExpression options")
+			return &Gorex{ }, errors.New("Gorex @124: invalid GolangExpression options")
 		}
 	}
 
-	return &r, nil
+	return r, nil
 }
 
 func (g *Gorex) Output() (string, error) {
@@ -205,8 +203,8 @@ func (g *Gorex) Output() (string, error) {
 		if flagParens { o.WriteString(")") }
 
 		o.WriteString("(")
-		if gr.anchor != "" { o.WriteString(string(gr.anchor)) }
 		// add token data
+		if gr.anchor != "" { o.WriteString(string(gr.anchor)) }
 		for i, tk := range(gr.tokens) {
 			if tk.class != NoClass {
 				if len(tk.fixed) != 0 {
@@ -273,13 +271,13 @@ func verifyClass(a string) bool {
 	return false
 }
 
-func (g *Gorex) AddClass(c string) (*Gorex, error) {
+func (g *Gorex) AddClass(c string) error {
 	if c == NoClass {
-		return eG, errors.New("Gorex @205: invalid class")
+		return errors.New("Gorex @205: invalid class")
 	}
 
 	if !g.unsafe { // is safe
-		if !verifyClass(c) { return eG, errors.New("Gorex @209: invalid class") }
+		if !verifyClass(c) { return errors.New("Gorex @209: invalid class") }
 	}
 
 	id := len(g.groups)
@@ -288,45 +286,45 @@ func (g *Gorex) AddClass(c string) (*Gorex, error) {
 
 	g.groups[id].tokens = append(g.groups[id].tokens, rexToken { "", c, rexQuan{ } } )
 
-	return g, nil
+	return nil
 }
 
-func (g *Gorex) AddClassToLast(c string) (*Gorex, error) {
+func (g *Gorex) AddClassToLast(c string) error {
 	if !g.unsafe { // is safe
-		if !verifyClass(c) { return eG, errors.New("Gorex @223: invalid class") }
+		if !verifyClass(c) { return errors.New("Gorex @223: invalid class") }
 	}
 
-	if len(g.groups) == 0 { return eG, errors.New("Gorex @226: invalid group index") }
+	if len(g.groups) == 0 { return errors.New("Gorex @226: invalid group index") }
 	gId := len(g.groups) - 1
-	if len(g.groups[gId].tokens) == 0 { return eG, errors.New("Gorex @228: invalid token index") }
+	if len(g.groups[gId].tokens) == 0 { return errors.New("Gorex @228: invalid token index") }
 	tId := len(g.groups[gId].tokens) - 1
 
 	g.groups[gId].tokens[tId].class = g.groups[gId].tokens[tId].class + c
 
-	return g, nil
+	return nil
 }
 
-func (g *Gorex) AddFixed(a string) (*Gorex, error) {
+func (g *Gorex) AddFixed(a string) error {
 	for _, b := range(a) {
-		if byte(b) >= 128 { return eG, errors.New("Gorex @238: invalid byte error") }
+		if byte(b) >= 128 { return errors.New("Gorex @238: invalid byte error") }
 	}
 	id := len(g.groups)
 	r := rexGroup{ }
 	g.groups = append(g.groups, r)
 	g.groups[id].tokens = append(g.groups[id].tokens, rexToken{ a, NoClass, rexQuan{ } } )
 
-	return g, nil
+	return nil
 }
 
-func (g *Gorex) AddFixedToLast(a string) (*Gorex, error) {
+func (g *Gorex) AddFixedToLast(a string) error {
 	for _, b := range(a) {
-		if byte(b) >= 128 { return eG, errors.New("Gorex @250: invalid byte value") }
+		if byte(b) >= 128 { return errors.New("Gorex @250: invalid byte value") }
 	}
-	if(len(g.groups) == 0) { return eG, errors.New("Gorex @252: invalid group index") }
+	if(len(g.groups) == 0) { return errors.New("Gorex @252: invalid group index") }
 	id := len(g.groups) - 1
 	g.groups[id].tokens = append(g.groups[id].tokens, rexToken{ a, NoClass, rexQuan{ } } )
 
-	return g, nil
+	return nil
 }
 
 func verifyQuantifier(q Quantifier, args []int) bool {
@@ -357,15 +355,15 @@ func verifyQuantifier(q Quantifier, args []int) bool {
 	return false
 }
 
-func (g *Gorex) ApplyQuantifier(q Quantifier, args ...int) (*Gorex, error) {
-	if string(q) == "" { return eG, errors.New("Gorex @288: invalid quantifier") }
-	if len(g.groups) == 0 { return eG, errors.New("Gorex @289: invalid group index") }
+func (g *Gorex) ApplyQuantifier(q Quantifier, args ...int) error {
+	if string(q) == "" { return errors.New("Gorex @288: invalid quantifier") }
+	if len(g.groups) == 0 { return errors.New("Gorex @289: invalid group index") }
 	gId := len(g.groups) - 1
-	if len(g.groups[gId].tokens) == 0 { return eG, errors.New("Gorex @291: invalid token index") }
+	if len(g.groups[gId].tokens) == 0 { return errors.New("Gorex @291: invalid token index") }
 	tId := len(g.groups[gId].tokens) - 1
-	if g.groups[gId].tokens[tId].class == NoClass && len(g.groups[gId].tokens[tId].fixed) == 0 { return eG, errors.New("Gorex @293: invalid quantifier") }
-	if len(args) > 2 { return eG, errors.New("Gorex @294: invalid quantifier") }
-	if !verifyQuantifier(q, args) { return eG, errors.New("Gorex @295: invalid quantifier") }
+	if g.groups[gId].tokens[tId].class == NoClass && len(g.groups[gId].tokens[tId].fixed) == 0 { return errors.New("Gorex @293: invalid quantifier") }
+	if len(args) > 2 { return errors.New("Gorex @294: invalid quantifier") }
+	if !verifyQuantifier(q, args) { return errors.New("Gorex @295: invalid quantifier") }
 
 	g.groups[gId].tokens[tId].quantifier.regexp = q
 
@@ -381,25 +379,25 @@ func (g *Gorex) ApplyQuantifier(q Quantifier, args ...int) (*Gorex, error) {
 		g.groups[gId].tokens[tId].quantifier.argv[1] = args[1]
 	}
 
-	return g, nil
+	return nil
 }
 
 func verifyAnchor(m Anchor) bool {
-	if m == AtBeginning { return true }
-	if m == AtEnd { return true }
+	if m == atBeginning { return true }
+	if m == atEnd { return true }
 
 	return false
 }
 
-func (g *Gorex) ApplyAnchor(m Anchor) (*Gorex, error) {
-	if string(m) == "" { return eG, errors.New("Gorex @395: invalid anchor") }
-	if len(g.groups) == 0 { return eG, errors.New("Gorex @396: invalid group index") }
+func (g *Gorex) ApplyAnchor(m Anchor) error {
+	if string(m) == "" { return errors.New("Gorex @389: invalid anchor") }
+	if len(g.groups) == 0 { return errors.New("Gorex @390: invalid group index") }
 	gId := len(g.groups) - 1
-	if !verifyAnchor(m) { return eG, errors.New("Gorex @398: invalid anchor") }
+	if !verifyAnchor(m) { return errors.New("Gorex @392: invalid anchor") }
 
 	g.groups[gId].anchor = m
 
-	return g, nil
+	return nil
 }
 
 func verifyFlags(c string) bool {
@@ -413,12 +411,12 @@ func verifyFlags(c string) bool {
 	return true
 }
 
-func (g *Gorex) SetFlags(c string) (*Gorex, error) {
-	if c == "" { return eG, errors.New("Gorex @326: invalid flag") }
-	if len(g.groups) == 0 { return eG, errors.New("Gorex @327: invalid group index") }
+func (g *Gorex) SetFlags(c string) error {
+	if c == "" { return errors.New("Gorex @326: invalid flag") }
+	if len(g.groups) == 0 { return errors.New("Gorex @327: invalid group index") }
 	gId := len(g.groups) - 1
 
-	if !verifyFlags(c) { return eG, errors.New("Gorex @342: invalid flag") }
+	if !verifyFlags(c) { return errors.New("Gorex @342: invalid flag") }
 	for _, ch := range(c) {
 		if string(ch) == CaseInsensitive { g.groups[gId].flags.i = true }
 		if string(ch) == MultiLineMode { g.groups[gId].flags.m = true }
@@ -426,15 +424,15 @@ func (g *Gorex) SetFlags(c string) (*Gorex, error) {
 		if string(ch) == UngreedySwap { g.groups[gId].flags.U = true }
 	}
 
-	return g, nil
+	return nil
 }
 
-func (g *Gorex) ClearFlags(c string) (*Gorex, error) {
-	if c == "" { return eG, errors.New("Gorex @326: invalid flag") }
-	if len(g.groups) == 0 { return eG, errors.New("Gorex @327: invalid group index") }
+func (g *Gorex) ClearFlags(c string) error {
+	if c == "" { return errors.New("Gorex @326: invalid flag") }
+	if len(g.groups) == 0 { return errors.New("Gorex @327: invalid group index") }
 	gId := len(g.groups) - 1
 
-	if !verifyFlags(c) { return eG, errors.New("Gorex @342: invalid flag") }
+	if !verifyFlags(c) { return errors.New("Gorex @342: invalid flag") }
 
 	for _, ch := range(c) {
 		if string(ch) == CaseInsensitive { g.groups[gId].flags.i = false }
@@ -443,5 +441,5 @@ func (g *Gorex) ClearFlags(c string) (*Gorex, error) {
 		if string(ch) == UngreedySwap { g.groups[gId].flags.U = false }
 	}
 
-	return g, nil
+	return nil
 }

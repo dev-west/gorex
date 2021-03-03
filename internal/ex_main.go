@@ -74,14 +74,4 @@ func main() {
     // Output:
     // Attempt: goat@mail, value: false
     // Attempt: finn@.net, value: false
-
-    g, _ = GolangExpression() // create new g on heap
-    g, _ = g.ApplyQuantifier("Not a Quantifier") // returns internal eG
-    g, _ = g.AddFixed("com") // returns modified internal eG
-    g, _ = GolangExpression() // create new g on heap
-    g, _ = g.ApplyQuantifier("Not a Quantifier") // returns internal eG
-    g, _ = g.AddFixed("org") // modifies internal eG
-    g, _ = g.ApplyQuantifier(OneOrMore) // modifies internal eG
-    var o, _ = g.Output()
-    fmt.Printf("Bug Output: %s; should be (org+)\n", o)
 }
