@@ -51,6 +51,7 @@ type Gorex struct {
 type rexGroup struct {
 	tokens []rexToken
 	flags rexFlag
+	anchor Anchor
 }
 
 type rexToken struct {
@@ -58,6 +59,14 @@ type rexToken struct {
 	class string
 	quantifier rexQuan
 }
+
+// token anchors
+type Anchor string
+
+const (
+	AtBeginning = "^"
+	AtEnd = "&"
+)
 
 // token quantifiers (variable data)
 type rexQuan struct {
@@ -196,6 +205,7 @@ func (g *Gorex) Output() (string, error) {
 		if flagParens { o.WriteString(")") }
 
 		o.WriteString("(")
+		if gr.anchor != "" { o.WriteString(string(gr.anchor)) }
 		// add token data
 		for i, tk := range(gr.tokens) {
 			if tk.class != NoClass {
@@ -370,6 +380,24 @@ func (g *Gorex) ApplyQuantifier(q Quantifier, args ...int) (*Gorex, error) {
 		g.groups[gId].tokens[tId].quantifier.argv[0] = args[0]
 		g.groups[gId].tokens[tId].quantifier.argv[1] = args[1]
 	}
+
+	return g, nil
+}
+
+func verifyAnchor(m Anchor) bool {
+	if m == AtBeginning { return true }
+	if m == AtEnd { return true }
+
+	return false
+}
+
+func (g *Gorex) ApplyAnchor(m Anchor) (*Gorex, error) {
+	if string(m) == "" { return eG, errors.New("Gorex @395: invalid anchor") }
+	if len(g.groups) == 0 { return eG, errors.New("Gorex @396: invalid group index") }
+	gId := len(g.groups) - 1
+	if !verifyAnchor(m) { return eG, errors.New("Gorex @398: invalid anchor") }
+
+	g.groups[gId].anchor = m
 
 	return g, nil
 }

@@ -284,6 +284,37 @@ func TestApplyQuantifier(t *testing.T) {
 	if e != nil { t.Fatalf("ApplyQuantifier(\"%s\", %d, %d) unexpected error invalid quantifier", q, 2, 3) }
 }
 
+func TestApplyAnchor(t *testing.T) {
+	var g *Gorex
+	var e error
+	var a Anchor = AtEnd
+	var f string = "end"
+	var w string = "(" + string(a) + f + ")"
+	var o string
+
+	// construct expression
+	g, _ = GolangExpression()
+
+	// apply anchor without prior
+	g, e = g.ApplyAnchor(a)
+	if e == nil { t.Fatalf("ApplyAnchor(\"%s\") expected error invalid group id: %s", a, e) }
+
+	g, _ = g.AddFixed(f)
+
+	// apply invalid anchor
+	g, e = g.ApplyAnchor("x")
+	if e == nil { t.Fatalf("ApplyAnchor(\"x\") expected error invalid anchor: %s", e) }
+
+	// apply valid anchor
+	g, e = g.ApplyAnchor(a)
+	if e != nil { t.Fatalf("ApplyAnchor(\"%s\") unexpected error: %s", a, e) }
+
+	// test output
+	o, e = g.Output()
+	if o != w { t.Fatalf("ApplyAnchor(\"%s\") incorrect output %s: %s", a, w, o) }
+
+}
+
 func TestFlags(t *testing.T) {
 	var g *Gorex
 	var e error
